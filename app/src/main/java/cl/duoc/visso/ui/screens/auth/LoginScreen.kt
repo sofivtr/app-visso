@@ -30,7 +30,7 @@ import cl.duoc.visso.utils.Resource
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
     onNavigateToForgotPassword: () -> Unit,
-    onLoginSuccess: () -> Unit,
+    onLoginSuccess: (String) -> Unit, // Ahora recibe el rol
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
@@ -41,9 +41,11 @@ fun LoginScreen(
     val authState by viewModel.authState.collectAsState()
 
     LaunchedEffect(authState) {
-        when (authState) {
+        when (val state = authState) {
             is Resource.Success -> {
-                onLoginSuccess()
+                // Extraer el rol del usuario y redirigir
+                val rol = state.data?.rol ?: "USER"
+                onLoginSuccess(rol)
                 viewModel.resetAuthState()
             }
             is Resource.Error -> {

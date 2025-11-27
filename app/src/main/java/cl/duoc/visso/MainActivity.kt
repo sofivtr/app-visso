@@ -41,8 +41,15 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(Unit) {
                         scope.launch {
                             val isLoggedIn = sessionManager.isLoggedIn.first()
+                            val userRole = sessionManager.userRole.first()
+
                             startDestination = if (isLoggedIn) {
-                                Screen.Home.route
+                                // Redirigir según el rol del usuario
+                                if (userRole == "ADMIN") {
+                                    Screen.AdminHome.route
+                                } else {
+                                    Screen.Home.route
+                                }
                             } else {
                                 Screen.Login.route
                             }

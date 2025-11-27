@@ -12,6 +12,9 @@ import cl.duoc.visso.ui.screens.carrito.CarritoScreen
 import cl.duoc.visso.ui.screens.carrito.DetalleCarritoScreen
 import cl.duoc.visso.ui.screens.perfil.PerfilScreen
 import cl.duoc.visso.ui.screens.cotizacion.CotizacionScreen
+import cl.duoc.visso.ui.screens.admin.AdminHomeScreen
+import cl.duoc.visso.ui.screens.admin.AdminProductosScreen
+import cl.duoc.visso.ui.screens.admin.AdminUsuariosScreen
 
 
 @Composable
@@ -28,8 +31,15 @@ fun NavGraph(
             LoginScreen(
                 onNavigateToRegister = { navController.navigate(Screen.Register.route) },
                 onNavigateToForgotPassword = { navController.navigate(Screen.ForgotPassword.route) },
-                onLoginSuccess = {
-                    navController.navigate(Screen.Home.route) {
+                onLoginSuccess = { rol ->
+                    // Redirigir según el rol del usuario
+                    val destination = if (rol == "ADMIN") {
+                        Screen.AdminHome.route
+                    } else {
+                        Screen.Home.route
+                    }
+
+                    navController.navigate(destination) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 }
@@ -53,7 +63,7 @@ fun NavGraph(
             )
         }
 
-        // ===== MAIN FLOW =====
+        // ===== USER FLOW =====
         composable(Screen.Home.route) {
             HomeScreen(navController)
         }
@@ -92,6 +102,19 @@ fun NavGraph(
                 detalleCarritoId = detalleId,
                 onNavigateBack = { navController.popBackStack() }
             )
+        }
+
+        // ===== ADMIN FLOW =====
+        composable(Screen.AdminHome.route) {
+            AdminHomeScreen(navController)
+        }
+
+        composable(Screen.AdminProductos.route) {
+            AdminProductosScreen(navController)
+        }
+
+        composable(Screen.AdminUsuarios.route) {
+            AdminUsuariosScreen(navController)
         }
     }
 }
