@@ -1,20 +1,22 @@
 package cl.duoc.visso.ui.screens.auth
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.duoc.visso.data.model.Usuario
 import cl.duoc.visso.data.repository.AuthRepository
 import cl.duoc.visso.utils.Resource
 import cl.duoc.visso.utils.SessionManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class AuthViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = AuthRepository()
-    private val sessionManager = SessionManager(application)
+@HiltViewModel
+class AuthViewModel @Inject constructor(
+    private val repository: AuthRepository,
+    private val sessionManager: SessionManager
+) : ViewModel() {
 
     private val _authState = MutableStateFlow<Resource<Usuario>?>(null)
     val authState: StateFlow<Resource<Usuario>?> = _authState

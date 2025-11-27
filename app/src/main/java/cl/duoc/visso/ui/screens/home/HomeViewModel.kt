@@ -1,7 +1,6 @@
 package cl.duoc.visso.ui.screens.home
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import cl.duoc.visso.data.model.Categoria
 import cl.duoc.visso.data.model.Producto
@@ -10,14 +9,17 @@ import cl.duoc.visso.data.repository.CarritoRepository
 import cl.duoc.visso.data.repository.ProductoRepository
 import cl.duoc.visso.utils.Resource
 import cl.duoc.visso.utils.SessionManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class HomeViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val productoRepository = ProductoRepository()
-    private val carritoRepository = CarritoRepository()
-    private val sessionManager = SessionManager(application)
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val productoRepository: ProductoRepository,
+    private val carritoRepository: CarritoRepository,
+    private val sessionManager: SessionManager
+) : ViewModel() {
 
     private val _productos = MutableStateFlow<Resource<List<Producto>>>(Resource.Loading())
     val productos: StateFlow<Resource<List<Producto>>> = _productos

@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import cl.duoc.visso.data.model.Usuario
 import cl.duoc.visso.ui.components.BottomNavigationBar
@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun PerfilScreen(
     navController: NavController,
-    viewModel: PerfilViewModel = viewModel()
+    viewModel: PerfilViewModel = hiltViewModel()
 ) {
     val usuarioState by viewModel.usuario.collectAsState()
     val updateState by viewModel.updateState.collectAsState()

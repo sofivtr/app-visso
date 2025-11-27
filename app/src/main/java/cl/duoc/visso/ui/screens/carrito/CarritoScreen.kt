@@ -5,7 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,8 +14,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import cl.duoc.visso.data.model.Cotizacion
 import cl.duoc.visso.data.model.DetalleCarrito
 import cl.duoc.visso.ui.components.BottomNavigationBar
 import cl.duoc.visso.ui.navigation.Screen
@@ -27,17 +28,37 @@ import coil.compose.AsyncImage
 @Composable
 fun CarritoScreen(
     navController: NavController,
-    viewModel: CarritoViewModel = viewModel()
+    viewModel: CarritoViewModel = hiltViewModel()
 ) {
     val carritoState by viewModel.carrito.collectAsState()
     val checkoutState by viewModel.checkoutState.collectAsState()
+    val deleteState by viewModel.deleteState.collectAsState()
 
     var showCheckoutDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var detalleAEliminar by remember { mutableStateOf<DetalleCarrito?>(null) }
+    var cotizacionAMostrar by remember { mutableStateOf<Cotizacion?>(null) }
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(checkoutState) {
         when (checkoutState) {
             is Resource.Success -> {
                 showCheckoutDialog = true
+            }
+            else -> {}
+        }
+    }
+
+    LaunchedEffect(deleteState) {
+        when (deleteState) {
+            is Resource.Success -> {
+                snackbarHostState.showSnackbar("Producto eliminado")
+                viewModel.resetDeleteState()
+            }
+            is Resource.Error -> {
+                snackbarHostState.showSnackbar("Error al eliminar")
+                viewModel.resetDeleteState()
             }
             else -> {}
         }
@@ -55,7 +76,8 @@ fun CarritoScreen(
         },
         bottomBar = {
             BottomNavigationBar(navController = navController, currentRoute = "carrito")
-        }
+        },
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         when (val state = carritoState) {
             is Resource.Loading -> {
@@ -74,6 +96,13 @@ fun CarritoScreen(
                     CarritoContent(
                         carrito = carrito,
                         onCheckout = { viewModel.finalizarCompra() },
+                        onDelete = { detalle ->
+                            detalleAEliminar = detalle
+                            showDeleteDialog = true
+                        },
+                        onVerDetalle = { cotizacion ->
+                            cotizacionAMostrar = cotizacion
+                        },
                         checkoutLoading = checkoutState is Resource.Loading,
                         modifier = Modifier.padding(padding)
                     )
@@ -91,6 +120,71 @@ fun CarritoScreen(
                 }
             }
         }
+    }
+
+    // Dialog de confirmación de eliminación
+    if (showDeleteDialog && detalleAEliminar != null) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Eliminar Producto") },
+            text = {
+                Text("¿Estás seguro de eliminar \"${detalleAEliminar?.producto?.nombre}\" del carrito?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.eliminarDelCarrito(detalleAEliminar?.id ?: 0)
+                        showDeleteDialog = false
+                        detalleAEliminar = null
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) {
+                    Text("Eliminar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Dialog de detalles de cotización
+    if (cotizacionAMostrar != null) {
+        AlertDialog(
+            onDismissRequest = { cotizacionAMostrar = null },
+            title = { Text("Detalles de Cotización") },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    DetalleCotizacion("Paciente", cotizacionAMostrar!!.nombrePaciente)
+                    DetalleCotizacion("Fecha Receta", cotizacionAMostrar!!.fechaReceta)
+                    DetalleCotizacion("Grado OD", cotizacionAMostrar!!.gradoOd.toString())
+                    DetalleCotizacion("Grado OI", cotizacionAMostrar!!.gradoOi.toString())
+                    DetalleCotizacion("Tipo Lente", cotizacionAMostrar!!.tipoLente)
+                    DetalleCotizacion("Tipo Cristal", cotizacionAMostrar!!.tipoCristal)
+
+                    if (cotizacionAMostrar!!.antirreflejo) {
+                        Text("✓ Antirreflejo", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    if (cotizacionAMostrar!!.filtroAzul) {
+                        Text("✓ Filtro Azul", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    if (cotizacionAMostrar!!.despachoDomicilio) {
+                        Text("✓ Despacho a Domicilio", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = { cotizacionAMostrar = null }) {
+                    Text("Cerrar")
+                }
+            }
+        )
     }
 
     // Dialog de compra exitosa
@@ -113,6 +207,24 @@ fun CarritoScreen(
                     Text("Aceptar")
                 }
             }
+        )
+    }
+}
+
+@Composable
+fun DetalleCotizacion(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = "$label:",
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodyMedium
         )
     }
 }
@@ -145,6 +257,8 @@ fun EmptyCart() {
 fun CarritoContent(
     carrito: cl.duoc.visso.data.model.Carrito?,
     onCheckout: () -> Unit,
+    onDelete: (DetalleCarrito) -> Unit,
+    onVerDetalle: (Cotizacion) -> Unit,
     checkoutLoading: Boolean,
     modifier: Modifier = Modifier
 ) {
@@ -160,12 +274,15 @@ fun CarritoContent(
         ) {
             carrito?.detalles?.let { detalles ->
                 items(detalles) { detalle ->
-                    CarritoItemCard(detalle = detalle)
+                    CarritoItemCard(
+                        detalle = detalle,
+                        onDelete = { onDelete(detalle) },
+                        onVerDetalle = { detalle.cotizacion?.let { onVerDetalle(it) } }
+                    )
                 }
             }
         }
 
-        // Total y botón de compra
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
@@ -216,7 +333,11 @@ fun CarritoContent(
 }
 
 @Composable
-fun CarritoItemCard(detalle: DetalleCarrito) {
+fun CarritoItemCard(
+    detalle: DetalleCarrito,
+    onDelete: () -> Unit,
+    onVerDetalle: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -250,6 +371,27 @@ fun CarritoItemCard(detalle: DetalleCarrito) {
                     text = "Cantidad: ${detalle.cantidad}",
                     style = MaterialTheme.typography.bodySmall
                 )
+
+                // Si tiene cotización, mostrar indicador
+                if (detalle.tieneCotizacion()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = BluePrimary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Cotización personalizada",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = BluePrimary
+                        )
+                    }
+                }
+
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = detalle.getFormattedSubtotal(),
@@ -257,6 +399,31 @@ fun CarritoItemCard(detalle: DetalleCarrito) {
                     color = BluePrimary,
                     fontWeight = FontWeight.Bold
                 )
+            }
+
+            // Botones de acción
+            Column(
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                // Botón ver detalles (solo si tiene cotización)
+                if (detalle.tieneCotizacion()) {
+                    IconButton(onClick = onVerDetalle) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Ver Detalles",
+                            tint = BluePrimary
+                        )
+                    }
+                }
+
+                // Botón eliminar
+                IconButton(onClick = onDelete) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         }
     }

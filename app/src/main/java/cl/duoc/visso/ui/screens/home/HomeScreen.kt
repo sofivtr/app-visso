@@ -1,6 +1,5 @@
 package cl.duoc.visso.ui.screens.home
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -16,10 +15,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import cl.duoc.visso.data.model.Producto
 import cl.duoc.visso.ui.components.BottomNavigationBar
+import cl.duoc.visso.ui.navigation.Screen
 import cl.duoc.visso.ui.theme.BluePrimary
 import cl.duoc.visso.utils.Resource
 import coil.compose.AsyncImage
@@ -28,7 +28,7 @@ import coil.compose.AsyncImage
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val productos by viewModel.filteredProducts.collectAsState()
     val categorias by viewModel.categorias.collectAsState()
@@ -36,6 +36,10 @@ fun HomeScreen(
     val addToCartState by viewModel.addToCartState.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Estado para mostrar dialog de cotización
+    var productoSeleccionado by remember { mutableStateOf<Producto?>(null) }
+    var showCotizacionDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(addToCartState) {
         when (addToCartState) {
@@ -73,7 +77,6 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Filtros de categoría
             if (categorias is Resource.Success) {
                 CategoriesFilter(
                     categorias = (categorias as Resource.Success).data ?: emptyList(),
@@ -82,7 +85,6 @@ fun HomeScreen(
                 )
             }
 
-            // Lista de productos
             if (productos.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -99,9 +101,114 @@ fun HomeScreen(
                     items(productos) { producto ->
                         ProductCard(
                             producto = producto,
-                            onAddToCart = { viewModel.agregarAlCarrito(producto.id) }
+                            onAddToCart = {
+                                // LÓGICA CRÍTICA: Interceptar si es lente óptico
+                                if (producto.esLenteOptico()) {
+                                    productoSeleccionado = producto
+                                    showCotizacionDialog = true
+                                } else {
+                                    viewModel.agregarAlCarrito(producto.id ?: 0)
+                                }
+                            }
                         )
                     }
+                }
+            }
+        }
+    }
+
+    // Dialog para redirigir a cotización
+    if (showCotizacionDialog && productoSeleccionado != null) {
+        AlertDialog(
+            onDismissRequest = { showCotizacionDialog = false },
+            title = { Text("Lente Óptico") },
+            text = {
+                Text("Este producto requiere una cotización personalizada. ¿Desea proceder con el formulario de cotización?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showCotizacionDialog = false
+                        // Navegar a pantalla de cotización pasando el ID del producto
+                        navController.navigate("cotizacion/${productoSeleccionado?.id}")
+                    }
+                ) {
+                    Text("Continuar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCotizacionDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+}
+
+@Composable
+fun ProductCard(
+    producto: Producto,
+    onAddToCart: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp)
+        ) {
+            AsyncImage(
+                model = producto.getFullImageUrl(),
+                contentDescription = producto.nombre,
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = producto.nombre,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = producto.marca.nombre,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = producto.getFormattedPrice(),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = BluePrimary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Button(
+                    onClick = onAddToCart,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ShoppingCart,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Agregar")
                 }
             }
         }
@@ -131,79 +238,6 @@ fun CategoriesFilter(
                 onClick = { onCategorySelected(categoria.id) },
                 label = { Text(categoria.nombre) }
             )
-        }
-    }
-}
-
-@Composable
-fun ProductCard(
-    producto: Producto,
-    onAddToCart: () -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp)
-        ) {
-            // Imagen del producto
-            AsyncImage(
-                model = producto.getFullImageUrl(),
-                contentDescription = producto.nombre,
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Información del producto
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight(),
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        text = producto.nombre,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = producto.marca.nombre,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = producto.getFormattedPrice(),
-                        style = MaterialTheme.typography.titleLarge,
-                        color = BluePrimary,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                // Botón agregar al carrito
-                Button(
-                    onClick = onAddToCart,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ShoppingCart,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Agregar")
-                }
-            }
         }
     }
 }

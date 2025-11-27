@@ -15,7 +15,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import cl.duoc.visso.data.model.Usuario
 import cl.duoc.visso.ui.theme.BluePrimary
 import cl.duoc.visso.utils.Resource
@@ -25,7 +25,7 @@ import cl.duoc.visso.utils.Resource
 fun RegisterScreen(
     onNavigateBack: () -> Unit,
     onRegisterSuccess: () -> Unit,
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
     var nombre by remember { mutableStateOf("") }
     var apellido by remember { mutableStateOf("") }

@@ -1,14 +1,17 @@
 package cl.duoc.visso.data.repository
 
 import cl.duoc.visso.data.model.*
-import cl.duoc.visso.data.remote.RetrofitClient
+import cl.duoc.visso.data.remote.ApiService
 import cl.duoc.visso.utils.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class AuthRepository {
-    private val api = RetrofitClient.apiService
-
+@Singleton
+class AuthRepository @Inject constructor(
+    private val api: ApiService
+) {
     suspend fun registrar(usuario: Usuario): Resource<Usuario> = withContext(Dispatchers.IO) {
         try {
             val response = api.registrar(usuario)

@@ -13,14 +13,19 @@ import cl.duoc.visso.ui.navigation.NavGraph
 import cl.duoc.visso.ui.navigation.Screen
 import cl.duoc.visso.ui.theme.VissoAppTheme
 import cl.duoc.visso.utils.SessionManager
+import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var sessionManager: SessionManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val sessionManager = SessionManager(this)
 
         setContent {
             VissoAppTheme {

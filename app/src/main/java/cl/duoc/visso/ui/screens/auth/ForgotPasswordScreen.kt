@@ -10,7 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import cl.duoc.visso.ui.theme.BluePrimary
 import cl.duoc.visso.utils.Resource
 
@@ -18,7 +18,7 @@ import cl.duoc.visso.utils.Resource
 @Composable
 fun ForgotPasswordScreen(
     onNavigateBack: () -> Unit,
-    viewModel: AuthViewModel = viewModel()
+    viewModel: AuthViewModel = hiltViewModel()
 ) {
     var email by remember { mutableStateOf("") }
     val forgotPasswordState by viewModel.forgotPasswordState.collectAsState()

@@ -1,14 +1,17 @@
 package cl.duoc.visso.data.repository
 
 import cl.duoc.visso.data.model.*
-import cl.duoc.visso.data.remote.RetrofitClient
+import cl.duoc.visso.data.remote.ApiService
 import cl.duoc.visso.utils.Resource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class CarritoRepository {
-    private val api = RetrofitClient.apiService
-
+@Singleton
+class CarritoRepository @Inject constructor(
+    private val api: ApiService
+) {
     suspend fun obtenerCarrito(usuarioId: Long): Resource<Carrito> = withContext(Dispatchers.IO) {
         try {
             val response = api.obtenerCarrito(usuarioId)
@@ -42,6 +45,19 @@ class CarritoRepository {
                 Resource.Success("Compra realizada con éxito")
             } else {
                 Resource.Error("Error al finalizar compra")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Error de conexión")
+        }
+    }
+
+    suspend fun eliminarDelCarrito(detalleId: Long): Resource<String> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.eliminarDelCarrito(detalleId)
+            if (response.isSuccessful) {
+                Resource.Success("Producto eliminado del carrito")
+            } else {
+                Resource.Error("Error al eliminar producto")
             }
         } catch (e: Exception) {
             Resource.Error(e.localizedMessage ?: "Error de conexión")
