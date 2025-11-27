@@ -55,6 +55,9 @@ interface ApiService {
     @DELETE("api/carrito/detalle/{detalleId}")
     suspend fun eliminarDelCarrito(@Path("detalleId") detalleId: Long): Response<Unit>
 
+    @GET("api/carrito/detalle/{detalleId}")
+    suspend fun obtenerDetalleCarrito(@Path("detalleId") detalleId: Long): Response<DetalleCarrito>
+
     // ===== COTIZACIONES =====
     @POST("api/cotizaciones")
     suspend fun crearCotizacion(@Body cotizacion: Cotizacion): Response<Cotizacion>

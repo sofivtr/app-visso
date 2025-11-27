@@ -21,5 +21,5 @@ data class Producto(
 ) : Parcelable {
     fun getFormattedPrice(): String = precio.formatPrice()
     fun getFullImageUrl(): String = "http://192.168.0.15:8081${imagenUrl ?: ""}"
-    fun esLenteOptico(): Boolean = categoria.nombre.contains("óptico", ignoreCase = true)
+    fun esLenteOptico(): Boolean = categoria.nombre.contains("Opticos", ignoreCase = true)
 }

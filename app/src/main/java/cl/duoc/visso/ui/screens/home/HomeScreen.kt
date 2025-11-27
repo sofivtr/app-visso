@@ -1,5 +1,6 @@
 package cl.duoc.visso.ui.screens.home
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -103,10 +104,17 @@ fun HomeScreen(
                             producto = producto,
                             onAddToCart = {
                                 // LÓGICA CRÍTICA: Interceptar si es lente óptico
+                                Log.d("HomeScreen", "=== DEBUG COTIZACIÓN ===")
+                                Log.d("HomeScreen", "Producto: ${producto.nombre}")
+                                Log.d("HomeScreen", "Categoría nombre: '${producto.categoria.nombre}'")
+                                Log.d("HomeScreen", "esLenteOptico(): ${producto.esLenteOptico()}")
+                                
                                 if (producto.esLenteOptico()) {
+                                    Log.d("HomeScreen", "✓ Es lente óptico - Mostrando dialog")
                                     productoSeleccionado = producto
                                     showCotizacionDialog = true
                                 } else {
+                                    Log.d("HomeScreen", "✗ NO es lente óptico - Agregando directo al carrito")
                                     viewModel.agregarAlCarrito(producto.id ?: 0)
                                 }
                             }

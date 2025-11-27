@@ -63,4 +63,17 @@ class CarritoRepository @Inject constructor(
             Resource.Error(e.localizedMessage ?: "Error de conexión")
         }
     }
+
+    suspend fun obtenerDetalleCarrito(detalleId: Long): Resource<DetalleCarrito> = withContext(Dispatchers.IO) {
+        try {
+            val response = api.obtenerDetalleCarrito(detalleId)
+            if (response.isSuccessful && response.body() != null) {
+                Resource.Success(response.body()!!)
+            } else {
+                Resource.Error("Error al cargar detalle")
+            }
+        } catch (e: Exception) {
+            Resource.Error(e.localizedMessage ?: "Error de conexión")
+        }
+    }
 }

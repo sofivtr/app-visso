@@ -6,10 +6,10 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import cl.duoc.visso.data.model.Producto
 import cl.duoc.visso.ui.screens.auth.*
 import cl.duoc.visso.ui.screens.home.HomeScreen
 import cl.duoc.visso.ui.screens.carrito.CarritoScreen
+import cl.duoc.visso.ui.screens.carrito.DetalleCarritoScreen
 import cl.duoc.visso.ui.screens.perfil.PerfilScreen
 import cl.duoc.visso.ui.screens.cotizacion.CotizacionScreen
 
@@ -66,6 +66,32 @@ fun NavGraph(
             PerfilScreen(navController)
         }
 
+        // ===== COTIZACIÓN =====
+        composable(
+            route = "cotizacion/{productoId}",
+            arguments = listOf(navArgument("productoId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val productoId = backStackEntry.arguments?.getLong("productoId") ?: 0L
+            CotizacionScreen(
+                productoId = productoId,
+                onNavigateBack = { navController.popBackStack() },
+                onCotizacionExitosa = {
+                    navController.popBackStack()
+                    navController.navigate(Screen.Carrito.route)
+                }
+            )
+        }
 
+        // ===== DETALLE CARRITO =====
+        composable(
+            route = "detalle_carrito/{detalleId}",
+            arguments = listOf(navArgument("detalleId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val detalleId = backStackEntry.arguments?.getLong("detalleId") ?: 0L
+            DetalleCarritoScreen(
+                detalleCarritoId = detalleId,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
     }
 }
