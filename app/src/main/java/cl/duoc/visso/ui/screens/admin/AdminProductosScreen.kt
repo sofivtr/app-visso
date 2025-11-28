@@ -1,9 +1,10 @@
 package cl.duoc.visso.ui.screens.admin
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -22,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -33,13 +35,13 @@ import cl.duoc.visso.utils.Resource
 import coil.compose.AsyncImage
 import java.io.File
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminProductosScreen(
     navController: NavController,
     viewModel: AdminProductosViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val productosState by viewModel.productos.collectAsState()
     val operationState by viewModel.operationState.collectAsState()
 
@@ -90,7 +92,7 @@ fun AdminProductosScreen(
                 onClick = { showCreateDialog = true },
                 containerColor = BluePrimary
             ) {
-                Icon(Icons.Default.Add, "Crear Producto")
+                Icon(Icons.Default.Add, "Crear Producto", tint = MaterialTheme.colorScheme.onPrimary)
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -176,8 +178,8 @@ fun AdminProductosScreen(
         ProductoFormDialog(
             title = "Crear Producto",
             onDismiss = { showCreateDialog = false },
-            onConfirm = { codigo, nombre, desc, precio, stock, tipo, imagen, cat, marca ->
-                viewModel.crearProducto(codigo, nombre, desc, precio, stock, tipo, imagen, cat, marca)
+            onConfirm = { codigo, nombre, desc, precio, stock, imagenUri, cat, marca ->
+                viewModel.crearProducto(codigo, nombre, desc, precio, stock, imagenUri, cat, marca, context)
             },
             viewModel = viewModel
         )
@@ -188,10 +190,12 @@ fun AdminProductosScreen(
             title = "Editar Producto",
             producto = productoSeleccionado,
             onDismiss = { showEditDialog = false },
-            onConfirm = { codigo, nombre, desc, precio, stock, tipo, imagen, cat, marca ->
+            onConfirm = { codigo, nombre, desc, precio, stock, imagenUri, cat, marca ->
                 viewModel.actualizarProducto(
                     productoSeleccionado!!.id!!,
-                    codigo, nombre, desc, precio, stock, tipo, imagen, cat, marca
+                    codigo, nombre, desc, precio, stock, imagenUri, cat, marca,
+                    productoSeleccionado!!.fechaCreacion,
+                    context
                 )
             },
             viewModel = viewModel
@@ -296,7 +300,7 @@ fun ProductoFormDialog(
     title: String,
     producto: Producto? = null,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, String, Double, Int, String, String, Categoria, Marca) -> Unit,
+    onConfirm: (String, String, String, Double, Int, String, Categoria, Marca) -> Unit,
     viewModel: AdminProductosViewModel
 ) {
     val context = LocalContext.current
@@ -308,7 +312,6 @@ fun ProductoFormDialog(
     var descripcion by remember { mutableStateOf(producto?.descripcion ?: "") }
     var precio by remember { mutableStateOf(producto?.precio?.toString() ?: "") }
     var stock by remember { mutableStateOf(producto?.stock?.toString() ?: "") }
-    var tipo by remember { mutableStateOf(producto?.tipo ?: "O") }
     var imagenUri by remember { mutableStateOf<Uri?>(null) }
     var imagenUrl by remember { mutableStateOf(producto?.imagenUrl ?: "") }
 
@@ -317,9 +320,9 @@ fun ProductoFormDialog(
 
     var categoriaExpanded by remember { mutableStateOf(false) }
     var marcaExpanded by remember { mutableStateOf(false) }
-    var tipoExpanded by remember { mutableStateOf(false) }
 
     var showImageOptions by remember { mutableStateOf(false) }
+    var showPermissionDialog by remember { mutableStateOf(false) }
 
     // Launcher para galería
     val galleryLauncher = rememberLauncherForActivityResult(
@@ -341,6 +344,24 @@ fun ProductoFormDialog(
                 imagenUri = it
                 imagenUrl = viewModel.procesarImagen(context, it)
             }
+        }
+    }
+
+    // Launcher para permisos de cámara
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            // Permiso concedido, abrir cámara
+            val photoFile = File(context.cacheDir, "photo_${System.currentTimeMillis()}.jpg")
+            cameraUri.value = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                photoFile
+            )
+            cameraLauncher.launch(cameraUri.value)
+        } else {
+            showPermissionDialog = true
         }
     }
 
@@ -395,44 +416,6 @@ fun ProductoFormDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
-
-                // Dropdown Tipo
-                ExposedDropdownMenuBox(
-                    expanded = tipoExpanded,
-                    onExpandedChange = { tipoExpanded = !tipoExpanded }
-                ) {
-                    OutlinedTextField(
-                        value = when(tipo) {
-                            "O" -> "Óptico"
-                            "S" -> "Sol"
-                            "C" -> "Contacto"
-                            "A" -> "Accesorio"
-                            else -> ""
-                        },
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Tipo") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(tipoExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = tipoExpanded,
-                        onDismissRequest = { tipoExpanded = false }
-                    ) {
-                        listOf("O" to "Óptico", "S" to "Sol", "C" to "Contacto", "A" to "Accesorio").forEach { (code, label) ->
-                            DropdownMenuItem(
-                                text = { Text(label) },
-                                onClick = {
-                                    tipo = code
-                                    tipoExpanded = false
-                                }
-                            )
-                        }
-                    }
-                }
 
                 // Dropdown Categoría
                 if (categoriasState is Resource.Success) {
@@ -538,7 +521,7 @@ fun ProductoFormDialog(
                         onConfirm(
                             codigo, nombre, descripcion,
                             precio.toDouble(), stock.toInt(),
-                            tipo, imagenUrl,
+                            imagenUri?.toString() ?: imagenUrl,
                             categoriaSeleccionada!!, marcaSeleccionada!!
                         )
                     }
@@ -564,14 +547,26 @@ fun ProductoFormDialog(
                     TextButton(
                         onClick = {
                             showImageOptions = false
-                            // Crear archivo temporal para la cámara
-                            val photoFile = File(context.cacheDir, "photo_${System.currentTimeMillis()}.jpg")
-                            cameraUri.value = FileProvider.getUriForFile(
-                                context,
-                                "${context.packageName}.fileprovider",
-                                photoFile
-                            )
-                            cameraLauncher.launch(cameraUri.value)
+                            // Verificar permiso de cámara
+                            when (PackageManager.PERMISSION_GRANTED) {
+                                ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.CAMERA
+                                ) -> {
+                                    // Permiso ya concedido
+                                    val photoFile = File(context.cacheDir, "photo_${System.currentTimeMillis()}.jpg")
+                                    cameraUri.value = FileProvider.getUriForFile(
+                                        context,
+                                        "${context.packageName}.fileprovider",
+                                        photoFile
+                                    )
+                                    cameraLauncher.launch(cameraUri.value)
+                                }
+                                else -> {
+                                    // Solicitar permiso
+                                    cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                            }
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
@@ -597,6 +592,20 @@ fun ProductoFormDialog(
             dismissButton = {
                 TextButton(onClick = { showImageOptions = false }) {
                     Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    // Dialog de permiso denegado
+    if (showPermissionDialog) {
+        AlertDialog(
+            onDismissRequest = { showPermissionDialog = false },
+            title = { Text("Permiso Requerido") },
+            text = { Text("Se necesita permiso de cámara para tomar fotos. Por favor, habilítalo en la configuración de la aplicación.") },
+            confirmButton = {
+                Button(onClick = { showPermissionDialog = false }) {
+                    Text("Entendido")
                 }
             }
         )

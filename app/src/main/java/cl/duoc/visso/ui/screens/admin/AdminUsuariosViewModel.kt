@@ -44,7 +44,9 @@ class AdminUsuariosViewModel @Inject constructor(
                     cargarUsuarios()
                     Resource.Success("Usuario creado exitosamente")
                 }
-                is Resource.Error -> Resource.Error(result.message ?: "Error al crear usuario")
+                is Resource.Error -> {
+                    Resource.Error(result.message ?: "Error al crear usuario")
+                }
                 is Resource.Loading -> Resource.Loading()
             }
         }
@@ -59,7 +61,9 @@ class AdminUsuariosViewModel @Inject constructor(
                     cargarUsuarios()
                     Resource.Success("Usuario actualizado exitosamente")
                 }
-                is Resource.Error -> Resource.Error(result.message ?: "Error al actualizar usuario")
+                is Resource.Error -> {
+                    Resource.Error(result.message ?: "Error al actualizar usuario")
+                }
                 is Resource.Loading -> Resource.Loading()
             }
         }
@@ -74,7 +78,9 @@ class AdminUsuariosViewModel @Inject constructor(
                     cargarUsuarios()
                     Resource.Success("Usuario eliminado exitosamente")
                 }
-                is Resource.Error -> Resource.Error(result.message ?: "Error al eliminar usuario")
+                is Resource.Error -> {
+                    Resource.Error(result.message ?: "Error al eliminar usuario")
+                }
                 is Resource.Loading -> Resource.Loading()
             }
         }

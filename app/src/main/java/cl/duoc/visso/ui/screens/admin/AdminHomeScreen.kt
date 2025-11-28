@@ -17,17 +17,23 @@ import androidx.navigation.NavController
 import cl.duoc.visso.data.model.Carrito
 import cl.duoc.visso.ui.theme.BluePrimary
 import cl.duoc.visso.utils.Resource
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import cl.duoc.visso.utils.SessionManager
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AdminHomeScreen(
     navController: NavController,
-    viewModel: AdminViewModel = hiltViewModel()
+    viewModel: AdminViewModel = hiltViewModel(),
+    sessionManager: SessionManager = androidx.compose.ui.platform.LocalContext.current.let { SessionManager(it) }
 ) {
     val ventasState by viewModel.ventas.collectAsState()
     var showActiveOnly by remember { mutableStateOf(false) }
+    var expandedPedidoId by remember { mutableStateOf<Long?>(null) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -36,6 +42,9 @@ fun AdminHomeScreen(
                 actions = {
                     IconButton(onClick = { viewModel.cargarVentas() }) {
                         Icon(Icons.Default.Refresh, "Actualizar")
+                    }
+                    IconButton(onClick = { showLogoutDialog = true }) {
+                        Icon(Icons.Default.ExitToApp, "Cerrar Sesión")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -53,7 +62,7 @@ fun AdminHomeScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Filtro de estado
+            // Filtros de estado
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -64,12 +73,18 @@ fun AdminHomeScreen(
                 FilterChip(
                     selected = !showActiveOnly,
                     onClick = { showActiveOnly = false },
-                    label = { Text("Todos") }
+                    label = { Text("Todos") },
+                    leadingIcon = if (!showActiveOnly) {
+                        { Icon(Icons.Default.Check, null, Modifier.size(18.dp)) }
+                    } else null
                 )
                 FilterChip(
                     selected = showActiveOnly,
                     onClick = { showActiveOnly = true },
-                    label = { Text("Solo Activos") }
+                    label = { Text("Solo Activos") },
+                    leadingIcon = if (showActiveOnly) {
+                        { Icon(Icons.Default.Check, null, Modifier.size(18.dp)) }
+                    } else null
                 )
             }
 
@@ -115,7 +130,13 @@ fun AdminHomeScreen(
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             items(ventas) { venta ->
-                                PedidoCard(venta = venta)
+                                PedidoCard(
+                                    venta = venta,
+                                    isExpanded = expandedPedidoId == venta.id,
+                                    onExpandClick = {
+                                        expandedPedidoId = if (expandedPedidoId == venta.id) null else venta.id
+                                    }
+                                )
                             }
                         }
                     }
@@ -141,11 +162,43 @@ fun AdminHomeScreen(
                 }
             }
         }
+
+        // Diálogo de confirmación de cierre de sesión
+        if (showLogoutDialog) {
+            AlertDialog(
+                onDismissRequest = { showLogoutDialog = false },
+                title = { Text("Cerrar Sesión") },
+                text = { Text("¿Estás seguro que deseas cerrar sesión?") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            scope.launch {
+                                sessionManager.clearSession()
+                                navController.navigate("login") {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                    ) {
+                        Text("Cerrar Sesión")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showLogoutDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
     }
 }
 
 @Composable
-fun PedidoCard(venta: Carrito) {
+fun PedidoCard(
+    venta: Carrito,
+    isExpanded: Boolean,
+    onExpandClick: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -180,7 +233,11 @@ fun PedidoCard(venta: Carrito) {
                         text = if (venta.estado == "A") "ACTIVO" else "CERRADO",
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = if (venta.estado == "A")
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        else
+                            MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 }
             }
@@ -250,6 +307,71 @@ fun PedidoCard(venta: Carrito) {
                 )
             }
 
+            // Botón expandir/colapsar productos
+            if (venta.detalles.isNotEmpty()) {
+                TextButton(
+                    onClick = onExpandClick,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (isExpanded) "Ocultar productos" else "Ver productos")
+                    Icon(
+                        if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        null
+                    )
+                }
+            }
+
+            // Lista de productos (expandible)
+            if (isExpanded && venta.detalles.isNotEmpty()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Detalle de productos:",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        venta.detalles.forEach { detalle ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = detalle.nombreProducto,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "Cantidad: ${detalle.cantidad}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = detalle.getFormattedSubtotal(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BluePrimary
+                                )
+                            }
+                            if (detalle != venta.detalles.last()) {
+                                Divider()
+                            }
+                        }
+                    }
+                }
+            }
+
             Divider()
 
             // Total
@@ -274,64 +396,12 @@ fun PedidoCard(venta: Carrito) {
     }
 }
 
-@Composable
-fun AdminBottomNavigationBar(
-    navController: NavController,
-    currentRoute: String
-) {
-    NavigationBar {
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.ShoppingCart, contentDescription = null) },
-            label = { Text("Pedidos") },
-            selected = currentRoute == "admin/home",
-            onClick = {
-                if (currentRoute != "admin/home") {
-                    navController.navigate("admin/home") {
-                        popUpTo("admin/home") { inclusive = true }
-                    }
-                }
-            }
-        )
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Inventory, contentDescription = null) },
-            label = { Text("Productos") },
-            selected = currentRoute == "admin/productos",
-            onClick = {
-                if (currentRoute != "admin/productos") {
-                    navController.navigate("admin/productos")
-                }
-            }
-        )
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.People, contentDescription = null) },
-            label = { Text("Usuarios") },
-            selected = currentRoute == "admin/usuarios",
-            onClick = {
-                if (currentRoute != "admin/usuarios") {
-                    navController.navigate("admin/usuarios")
-                }
-            }
-        )
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.ExitToApp, contentDescription = null) },
-            label = { Text("Salir") },
-            selected = false,
-            onClick = {
-                navController.navigate("login") {
-                    popUpTo(0) { inclusive = true }
-                }
-            }
-        )
-    }
-}
-
 fun formatearFecha(fechaString: String): String {
     return try {
-        val fecha = LocalDateTime.parse(fechaString)
-        fecha.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+        val formatoEntrada = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault())
+        val formatoSalida = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        val fecha = formatoEntrada.parse(fechaString)
+        fecha?.let { formatoSalida.format(it) } ?: fechaString
     } catch (e: Exception) {
         fechaString
     }

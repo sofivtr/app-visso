@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import cl.duoc.visso.ui.theme.BluePrimary
 import cl.duoc.visso.utils.Resource
+import cl.duoc.visso.utils.formatPrice
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,9 +81,9 @@ fun DetalleCarritoScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Text(text = detalle.producto.nombre)
+                                Text(text = detalle.nombreProducto)
                                 Text(
-                                    text = "Precio: ${detalle.producto.getFormattedPrice()}",
+                                    text = "Precio: ${detalle.precioUnitario.formatPrice()}",
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = BluePrimary,
                                     fontWeight = FontWeight.Bold

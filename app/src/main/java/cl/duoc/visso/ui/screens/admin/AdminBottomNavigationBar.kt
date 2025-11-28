@@ -16,13 +16,31 @@ fun AdminBottomNavigationBar(
         containerColor = MaterialTheme.colorScheme.surface
     ) {
         NavigationBarItem(
+            icon = { Icon(Icons.Default.ShoppingCart, "Pedidos") },
+            label = { Text("Pedidos") },
+            selected = currentRoute == "admin/home",
+            onClick = {
+                if (currentRoute != "admin/home") {
+                    navController.navigate("admin/home") {
+                        popUpTo("admin/home") { inclusive = true }
+                    }
+                }
+            },
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = BluePrimary,
+                selectedTextColor = BluePrimary,
+                indicatorColor = BluePrimary.copy(alpha = 0.1f)
+            )
+        )
+        
+        NavigationBarItem(
             icon = { Icon(Icons.Default.Inventory, "Productos") },
             label = { Text("Productos") },
             selected = currentRoute == "admin/productos",
             onClick = {
                 if (currentRoute != "admin/productos") {
                     navController.navigate("admin/productos") {
-                        popUpTo("admin/productos") { inclusive = true }
+                        popUpTo("admin/home") { inclusive = false }
                     }
                 }
             },
@@ -40,25 +58,7 @@ fun AdminBottomNavigationBar(
             onClick = {
                 if (currentRoute != "admin/usuarios") {
                     navController.navigate("admin/usuarios") {
-                        popUpTo("admin/productos") { inclusive = false }
-                    }
-                }
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = BluePrimary,
-                selectedTextColor = BluePrimary,
-                indicatorColor = BluePrimary.copy(alpha = 0.1f)
-            )
-        )
-
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.Category, "Categorías") },
-            label = { Text("Categorías") },
-            selected = currentRoute == "admin/categorias",
-            onClick = {
-                if (currentRoute != "admin/categorias") {
-                    navController.navigate("admin/categorias") {
-                        popUpTo("admin/productos") { inclusive = false }
+                        popUpTo("admin/home") { inclusive = false }
                     }
                 }
             },
@@ -69,4 +69,5 @@ fun AdminBottomNavigationBar(
             )
         )
     }
+    
 }

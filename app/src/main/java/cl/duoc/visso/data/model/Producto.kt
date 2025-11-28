@@ -13,7 +13,6 @@ data class Producto(
     @SerializedName("descripcion") val descripcion: String?,
     @SerializedName("precio") val precio: Double,
     @SerializedName("stock") val stock: Int,
-    @SerializedName("tipo") val tipo: String,
     @SerializedName("fechaCreacion") val fechaCreacion: String,
     @SerializedName("imagenUrl") val imagenUrl: String?,
     @SerializedName("categoria") val categoria: Categoria,

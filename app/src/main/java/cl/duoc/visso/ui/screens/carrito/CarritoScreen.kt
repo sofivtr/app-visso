@@ -1,3 +1,6 @@
+// ========================================
+// ui/screens/carrito/CarritoScreen.kt - MEJORADO CON ELIMINAR Y VER DETALLES
+// ========================================
 package cl.duoc.visso.ui.screens.carrito
 
 import androidx.compose.foundation.layout.*
@@ -349,8 +352,8 @@ fun CarritoItemCard(
                 .padding(12.dp)
         ) {
             AsyncImage(
-                model = detalle.producto.getFullImageUrl(),
-                contentDescription = detalle.producto.nombre,
+                model = detalle.producto?.getFullImageUrl(),
+                contentDescription = detalle.nombreProducto,
                 modifier = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(8.dp)),
@@ -363,7 +366,7 @@ fun CarritoItemCard(
                 modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    text = detalle.producto.nombre,
+                    text = detalle.nombreProducto,
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold
                 )

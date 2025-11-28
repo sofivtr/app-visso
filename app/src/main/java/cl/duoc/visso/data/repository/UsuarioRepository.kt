@@ -57,10 +57,21 @@ class UsuarioRepository @Inject constructor(
             if (response.isSuccessful) {
                 Resource.Success("Usuario eliminado")
             } else {
-                Resource.Error("Error al eliminar usuario")
+                val errorMsg = if (response.code() == 409 || response.code() == 500) {
+                    "No se puede eliminar el usuario porque tiene pedidos o carritos asociados"
+                } else {
+                    "Error al eliminar usuario"
+                }
+                Resource.Error(errorMsg)
             }
         } catch (e: Exception) {
-            Resource.Error(e.localizedMessage ?: "Error de conexión")
+            val errorMsg = if (e.message?.contains("constraint", ignoreCase = true) == true ||
+                             e.message?.contains("foreign key", ignoreCase = true) == true) {
+                "No se puede eliminar el usuario porque tiene pedidos o carritos asociados"
+            } else {
+                e.localizedMessage ?: "Error de conexión"
+            }
+            Resource.Error(errorMsg)
         }
     }
 }
